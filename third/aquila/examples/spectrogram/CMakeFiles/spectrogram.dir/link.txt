@@ -1,0 +1,1 @@
+/usr/bin/c++   -std=gnu++0x  -rdynamic CMakeFiles/spectrogram.dir/spectrogram.cpp.o  -o spectrogram ../../libAquila.a ../../lib/libOoura_fft.a 

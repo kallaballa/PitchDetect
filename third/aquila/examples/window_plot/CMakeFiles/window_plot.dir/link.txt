@@ -1,0 +1,1 @@
+/usr/bin/c++   -std=gnu++0x  -rdynamic CMakeFiles/window_plot.dir/window_plot.cpp.o  -o window_plot ../../libAquila.a ../../lib/libOoura_fft.a 

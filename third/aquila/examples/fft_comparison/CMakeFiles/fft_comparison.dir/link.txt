@@ -1,0 +1,1 @@
+/usr/bin/c++   -std=gnu++0x  -rdynamic CMakeFiles/fft_comparison.dir/fft_comparison.cpp.o  -o fft_comparison ../../libAquila.a ../../lib/libOoura_fft.a 
