@@ -15,10 +15,8 @@ MACHINE := $(shell uname -m)
 LDFLAGS  := -L/opt/local/lib
 
 ifeq ($(UNAME_S), Darwin)
- 	CXX=clang++
-	LD=clang++
-	CXXFLAGS += -stdlib=libc++ -I`brew --prefix jack`/include/jack -I`brew --prefix rtmidi`/include -I`brew --prefix libsamplerate`/include
-	LDFLAGS += -stdlib=libc++ 
+    CXX:=clang++
+    LD:=clang++
 endif
 
 ifeq ($(MACHINE), x86_64)
