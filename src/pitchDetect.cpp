@@ -6,7 +6,7 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <samplerate.h>
-#include <rtmidi/RtMidi.h>
+#include <RtMidi.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <limits>
