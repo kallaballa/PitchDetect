@@ -6,21 +6,17 @@ endif
 
 CXX      := g++
 CXXFLAGS := -pthread -fno-strict-aliasing -std=c++0x -pedantic -Wall
-LIBS     := -lpthread -lm -ljack -lrtmidi
+LIBS     := -lpthread -lm
 .PHONY: all release debian-release info debug clean debian-clean distclean 
 DESTDIR := /
 PREFIX := /usr/local
 MACHINE := $(shell uname -m)
 
-ifeq ($(UNAME_S), Linux)
-	LDFLAGS  := -L/opt/local/lib
-endif
+LDFLAGS  := -L/opt/local/lib
 
 ifeq ($(UNAME_S), Darwin)
  	CXX=clang++
 	LD=clang++
-	LIBS += -lboost_system-mt -lboost_program_options-mt -lAquila -lOoura_fft -lsamplerate
-	LDFLAGS +=  -L`brew --prefix jack`/lib -L`brew --prefix rtmidi`/lib -L`brew --prefix libsamplerate`/lib
 	CXXFLAGS += -stdlib=libc++ -I`brew --prefix jack`/include/jack -I`brew --prefix rtmidi`/include -I`brew --prefix libsamplerate`/include
 	LDFLAGS += -stdlib=libc++ 
 endif
