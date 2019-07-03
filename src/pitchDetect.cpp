@@ -83,13 +83,14 @@ std::vector<double> resample(vector<double> data, double sourceSampleRate, doubl
   return d_target;
 }
 
+size_t lastPitch = 0;
+
 void findDominantPitch(vector<double>& source, size_t sampleRate) {
 	//midiout->ignoreTypes( false, false, false );
   using namespace Aquila;
   vector<double> target;
   const std::size_t SIZE = 1024;
 	const double A1 = 440;
-  size_t lastPitch = 0;
 
   SignalSource in(source, sampleRate);
   FramesCollection frames(in,SIZE);
@@ -115,23 +116,25 @@ void findDominantPitch(vector<double>& source, size_t sampleRate) {
       const double& freq = ((maxJ + 1) * sampleRate) / SIZE;
 
     	const size_t p = round(68 + 12.0 * log2(freq / A1));
-      if(p != lastPitch && p > 4 && freq < 22050 && maxMag > 50) {
+      if(p != lastPitch && p > 40 && freq < 22050 && maxMag > 100) {
       	const size_t octave = floor(p / 12.0);
       	const string note = NOTE_LUT[p % 12];
 
       	message.clear();
       	message.push_back(0x80);
-      	message.push_back(64);
+      	message.push_back(lastPitch + 12);
       	message.push_back(0);
       	midiout->sendMessage(&message);
 
+      	//std::this_thread::sleep_for(std::chrono::milliseconds(200));
       	message.clear();
       	message.push_back(0x90);
-      	message.push_back(64);
-      	message.push_back(0x80);
+      	message.push_back(p + 12);
+      	message.push_back(0x1F);
       	midiout->sendMessage(&message);
+      	//std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-      	std::cout << note << octave << '\t' << totalMag << '\t' << maxMag << std::endl << std::flush;
+      	std::cout << note << octave << '\t' << p << '\t' << totalMag << '\t' << maxMag << std::endl << std::flush;
         lastPitch = p;
       }
     }
@@ -191,8 +194,8 @@ int main(int argc, char** argv) {
       std::cout << "  Input Port #" << i << ": " << portName << '\n';
     }
 
-	midiout->openVirtualPort( "virt");
-//	assert(midiout->isPortOpen());
+	midiout->openPort( 1 );
+	assert(midiout->isPortOpen());
   po::options_description genericDesc("Options");
   genericDesc.add_options()("help,h", "Produce help message");
 
