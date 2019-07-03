@@ -17,8 +17,12 @@ LDFLAGS  := -L/opt/local/lib
 ifeq ($(UNAME_S), Darwin)
  	CXX=clang++
 	LD=clang++
-	CXXFLAGS += -stdlib=libc++ -I`brew --prefix jack`/include/jack -I`brew --prefix rtmidi`/include -I`brew --prefix libsamplerate`/include
-	LDFLAGS += -stdlib=libc++ 
+	CXXFLAGS += -stdlib=libc++ 
+	CXXFLAGS += -I`brew --prefix jack`/include/jack -I`brew --prefix rtmidi`/include -I`brew --prefix libsamplerate`/include
+	CXXFLAGS += `pkg-config --cflags sndfile samplerate` 
+	LDFLAGS := -stdlib=libc++
+	LDFLAGS += -L`brew --prefix jack`/lib -L`brew --prefix rtmidi`/lib  -L`brew --prefix boost`/lib
+	LIBS +=  `pkg-config --libs sndfile samplerate` -lboost_system-mt -ljack -lrtmidi -lboost_program_options -lAquila -lOoura_fft
 endif
 
 ifeq ($(MACHINE), x86_64)
