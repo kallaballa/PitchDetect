@@ -116,7 +116,7 @@ void findDominantPitch(vector<double>& source, size_t sampleRate) {
       const double& freq = ((maxJ + 1) * sampleRate) / SIZE;
 
     	const size_t p = round(68 + 12.0 * log2(freq / A1));
-      if(p != lastPitch && p > 40 && freq < 22050 && maxMag > 100) {
+      if(p != lastPitch && p > 40 && freq < 22050 && maxMag > 50) {
       	const size_t octave = floor(p / 12.0);
       	const string note = NOTE_LUT[p % 12];
 
