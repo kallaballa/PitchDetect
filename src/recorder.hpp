@@ -22,8 +22,7 @@ public:
   Recorder(RecorderCallback callback, size_t bufferSize, uint32_t sampleRate);
   virtual ~Recorder();
   void capture(bool detach = true);
-  std::vector<std::string> list();
-
+  static std::vector<std::string> list();
 };
 
 #endif /* SRC_RECORDER_HPP_ */

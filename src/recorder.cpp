@@ -11,35 +11,12 @@
 using std::cerr;
 using std::endl;
 
-void displayDevices(const char *type, const char *list)
-{
-  ALCchar *ptr, *nptr;
-
-  ptr = (ALCchar *)list;
-  printf("list of all available %s devices:\n", type);
-  if (!list)
-  {
-    printf("none\n");
-  }
-  else
-  {
-    nptr = ptr;
-    while (*(nptr += strlen(ptr)+1) != 0)
-    {
-      printf("  %s\n", ptr);
-      ptr = nptr;
-    }
-    printf("  %s\n", ptr);
-  }
-}
 Recorder::Recorder(RecorderCallback callback, size_t bufferSize, uint32_t sampleRate) :
     callback_(callback),
 		bufferSize_(bufferSize),
     sampleRate_(sampleRate) {
   const ALCchar * devices;
 
-  char * s = (char *)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
-  displayDevices("input", s);
   std::cerr << alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER) << std::endl;
 
   std::cerr << "Opening capture device:" << std::endl;

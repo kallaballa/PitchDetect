@@ -107,17 +107,12 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
 			double maxMag = 0;
 			size_t maxJ = 0;
 			double totalMag = 0;
-			double secMaxMag = 0;
-			size_t secMaxJ = 0;
-
 
 			for (size_t j = 0; j < SIZE; ++j) {
 				auto& c = signalSpectrum[j];
 
 				const auto& mag = abs(c) / SIZE;
 				if (mag > maxMag) {
-					secMaxMag = maxMag;
-					secMaxJ = maxJ;
 					maxMag = mag;
 					maxJ = j;
 				}
@@ -194,9 +189,6 @@ void run(size_t bufferSize, uint32_t sampleRate) {
 }
 
 int main(int argc, char** argv) {
-  /*
-   * All distance options are in millimeter.
-   */
   string audioFile;
   size_t bufferSize = 1024;
   uint32_t sampleRate = 44100;
@@ -207,7 +199,7 @@ int main(int argc, char** argv) {
 		("buffersize,b", po::value<size_t>(&bufferSize)->default_value(bufferSize),"The internal audio buffer size")
 		("samplerate,s", po::value<uint32_t>(&sampleRate)->default_value(sampleRate),"The sample rate to record with")
 		("midiport,p", po::value<uint16_t>(&midiPort)->default_value(midiPort),"The midi port to send messages to")
-		("list,l", "List midi ports");
+		("list,l", "List midi ports and audio devices");
 
 
   po::options_description hidden("Hidden options");
@@ -233,8 +225,9 @@ int main(int argc, char** argv) {
   }
   if(vm.count("list")) {
 		unsigned int nPorts = midiout->getPortCount();
+		const auto captureDevices = Recorder::list();
 		if (nPorts == 0) {
-			std::cout << "No ports available!\n";
+			std::cerr << "No ports available!\n";
 			exit(1);
 		}
 		std::cerr << "Number of midi ports: " << nPorts << std::endl;
@@ -245,8 +238,15 @@ int main(int argc, char** argv) {
 			} catch (RtMidiError &error) {
 				error.printMessage();
 			}
-			std::cout << "  Input Port #" << i << ": " << portName << '\n';
+			std::cerr << "  Output Port #" << i << ": " << portName << '\n';
 		}
+
+		std::cerr << "Number of capture devices: " << captureDevices.size() << std::endl;
+		size_t i = 0;
+		for (const string& device : captureDevices) {
+			std::cerr << "  Capture device# " << i++ << ": " << device << '\n';
+		}
+
 		exit(0);
   }
 	midiout->openPort(midiPort);
