@@ -5,11 +5,9 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
-#include <samplerate.h>
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <RtMidi.h>
-#include <rtmidi/RtMidi.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <limits>
@@ -33,61 +31,11 @@ using std::endl;
 using std::vector;
 RtMidiOut *midiout = new RtMidiOut();
 std::vector<uint8_t> message;
+size_t lastPitch = 0;
 
 const std::vector<string> NOTE_LUT = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 typedef std::vector<double> AudioWindow;
 AudioWindow audio_buffer;
-
-AudioWindow mix_channels(AudioWindow buffer, size_t channels) {
-	AudioWindow mixed;
-  for(size_t i = 0; i < buffer.size(); i+=channels) {
-    double avg = 0;
-  	for(size_t j = 0; j < channels; ++j) {
-  	  avg += buffer[i + j];
-  	}
-  	avg /= channels;
-  	mixed.push_back(avg);
-  }
-
-  return mixed;
-}
-
-std::vector<double> resample(vector<double> data, double sourceSampleRate, double targetSampleRate) {
-  double sourceRatio = targetSampleRate / sourceSampleRate;
-  size_t sourceSize = data.size();
-  size_t targetSize = (sourceSize * sourceRatio) + 1;
-  float* f_source = new float[sourceSize];
-  float* f_target = new float[targetSize];
-
-  std::vector<double> d_target;
-
-  for(size_t i = 0; i < data.size(); ++i) {
-    f_source[i] = data[i];
-  }
-
-  SRC_DATA src_data;
-
-  src_data.data_in = f_source;
-  src_data.input_frames = sourceSize;
-  src_data.data_out = f_target;
-  src_data.output_frames = targetSize;
-  src_data.src_ratio = sourceRatio;
-  src_data.end_of_input = 1;
-
-  src_simple(&src_data, SRC_SINC_BEST_QUALITY, 1);
-
-  for(size_t i = 0; i < targetSize; ++i) {
-    d_target.push_back(f_target[i]);
-  }
-
-
-  delete[] f_source;
-  delete[] f_target;
-
-  return d_target;
-}
-
-size_t lastPitch = 0;
 
 void findDominantPitch(const vector<double>& source, size_t sampleRate) {
   using namespace Aquila;
