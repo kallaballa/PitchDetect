@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <ctime>
+#include <fstream>
 
 using std::cerr;
 using std::endl;
@@ -42,6 +43,7 @@ void* disk_thread (void *arg)
 	std::vector<double> buffer;
 	double min = std::numeric_limits<double>::max();
 	double max = std::numeric_limits<double>::min();
+	std::ofstream dump("dump.raw");
 
 	while (1) {
 
@@ -51,6 +53,7 @@ void* disk_thread (void *arg)
 		       (jack_ringbuffer_read_space (rb) >= bytes_per_frame)) {
 
 			jack_ringbuffer_read (rb, framebuf, bytes_per_frame);
+			dump.write(framebuf, bytes_per_frame);
 			int32_t frame = 0;
 			for(size_t i = 0; i < bytes_per_frame; ++i) {
 				int32_t shifted = ((int32_t)framebuf[i]) << (i*8);

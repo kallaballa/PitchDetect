@@ -13,13 +13,13 @@ typedef std::function<void(std::vector<double>&)> RecorderCallback;
 class Recorder {
   ALCdevice * captureDev_;
   RecorderCallback callback_;
+  size_t bufferSize_;
   uint32_t sampleRate_;
-  uint32_t samplesPerFrame_;
   ALubyte captureBuffer[1048576];
   ALint samplesAvailable = 0;
   std::vector<double> buffer;
 public:
-  Recorder(RecorderCallback callback, uint32_t sampleRate, uint32_t samplesPerFrame);
+  Recorder(RecorderCallback callback, size_t bufferSize, uint32_t sampleRate);
   virtual ~Recorder();
   void capture(bool detach = true);
   std::vector<std::string> list();

@@ -11,21 +11,6 @@
 using std::cerr;
 using std::endl;
 
-static void list_audio_devices(const ALCchar *devices) {
-	const ALCchar *device = devices, *next = devices + 1;
-	size_t len = 0;
-
-	fprintf(stdout, "Devices list:\n");
-	fprintf(stdout, "----------\n");
-	while (device && *device != '\0' && next && *next != '\0') {
-		fprintf(stdout, "%s\n", device);
-		len = strlen(device);
-		device += (len + 1);
-		next += (len + 2);
-	}
-	fprintf(stdout, "----------\n");
-}
-
 void displayDevices(const char *type, const char *list)
 {
   ALCchar *ptr, *nptr;
@@ -47,10 +32,10 @@ void displayDevices(const char *type, const char *list)
     printf("  %s\n", ptr);
   }
 }
-Recorder::Recorder(RecorderCallback callback, uint32_t sampleRate, uint32_t samplesPerFrame) :
+Recorder::Recorder(RecorderCallback callback, size_t bufferSize, uint32_t sampleRate) :
     callback_(callback),
-    sampleRate_(sampleRate),
-    samplesPerFrame_(samplesPerFrame){
+		bufferSize_(bufferSize),
+    sampleRate_(sampleRate) {
   const ALCchar * devices;
 
   char * s = (char *)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
@@ -58,7 +43,7 @@ Recorder::Recorder(RecorderCallback callback, uint32_t sampleRate, uint32_t samp
   std::cerr << alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER) << std::endl;
 
   std::cerr << "Opening capture device:" << std::endl;
-  captureDev_ = alcCaptureOpenDevice(NULL, sampleRate, AL_FORMAT_MONO16, samplesPerFrame);
+  captureDev_ = alcCaptureOpenDevice(NULL, sampleRate, AL_FORMAT_MONO16, 2);
   if (captureDev_ == NULL) {
     std::cerr << "Unable to open device!:" << std::endl;
     exit(1);
@@ -94,11 +79,11 @@ void Recorder::capture(bool detach) {
   while (true) {
     alcGetIntegerv(captureDev_, ALC_CAPTURE_SAMPLES, 1, &samplesAvailable);
 
-    if (samplesAvailable > 0) {
+    if (samplesAvailable > 1) {
       alcCaptureSamples(captureDev_, captureBuffer, samplesAvailable);
 
       for(size_t i = 0; i < (size_t)samplesAvailable; i+=2) {
-        if(buffer.size() >= samplesPerFrame_) {
+        if(buffer.size() >= bufferSize_) {
           callback_(buffer);
           buffer.clear();
         }

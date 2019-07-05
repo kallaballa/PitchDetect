@@ -6,7 +6,10 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <samplerate.h>
+#include <AL/al.h>
+#include <AL/alc.h>
 #include <RtMidi.h>
+#include <rtmidi/RtMidi.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <limits>
@@ -18,7 +21,8 @@
 #include "aquila/transform/FftFactory.h"
 #include "aquila/source/FramesCollection.h"
 #include "aquila/tools/TextPlot.h"
-#include "jackrecorder.hpp"
+#include "aquila/source/window/HammingWindow.h"
+#include "recorder.hpp"
 
 
 namespace po = boost::program_options;
@@ -85,38 +89,58 @@ std::vector<double> resample(vector<double> data, double sourceSampleRate, doubl
 
 size_t lastPitch = 0;
 
-void findDominantPitch(vector<double>& source, size_t sampleRate) {
-	//midiout->ignoreTypes( false, false, false );
+void findDominantPitch(const vector<double>& source, size_t sampleRate) {
   using namespace Aquila;
   vector<double> target;
-  const std::size_t SIZE = 1024;
+  const std::size_t SIZE = source.size();
 	const double A1 = 440;
-
+	HammingWindow hamming(SIZE);
   SignalSource in(source, sampleRate);
   FramesCollection frames(in,SIZE);
   auto signalFFT = FftFactory::getFft(SIZE);
 
   for (auto frame : frames) {
+  	frame *= hamming;
 
-    SpectrumType signalSpectrum = signalFFT->fft(frame.toArray());
-    for (std::size_t i = 0; i < SIZE; ++i) {
-    	double maxMag = 0;
-    	size_t maxJ = 0;
-    	double totalMag = 0;
+		SpectrumType signalSpectrum = signalFFT->fft(frame.toArray());
+		for (std::size_t i = 0; i < SIZE; ++i) {
+			double maxMag = 0;
+			size_t maxJ = 0;
+			double totalMag = 0;
+			double secMaxMag = 0;
+			size_t secMaxJ = 0;
 
-      for(size_t j = 0; j < SIZE; ++j) {
-      	const auto& c = signalSpectrum[j];
-      	const auto& mag = abs(c);
-      	if(mag > maxMag) {
-      		maxMag = mag;
-      		maxJ = j;
-      	}
-      	totalMag += mag;
-      }
+
+			for (size_t j = 0; j < SIZE; ++j) {
+				auto& c = signalSpectrum[j];
+
+				const auto& mag = abs(c) / SIZE;
+				if (mag > maxMag) {
+					secMaxMag = maxMag;
+					secMaxJ = maxJ;
+					maxMag = mag;
+					maxJ = j;
+				}
+				totalMag += mag;
+			}
+
+//			double sum = 0.0, mean, variance = 0.0, stdDeviation;
+//
+//			for (size_t i = 0; i < SIZE; ++i)
+//				sum += abs(signalSpectrum[i]);
+//			mean = sum / SIZE;
+//
+//			for (size_t i = 0; i < SIZE; ++i)
+//				variance += pow(abs(signalSpectrum[i]) - mean, 2);
+//			variance = variance / SIZE;
+//
+//			stdDeviation = sqrt(variance);
+
       const double& freq = ((maxJ + 1) * sampleRate) / SIZE;
 
     	const size_t p = round(68 + 12.0 * log2(freq / A1));
-      if(p != lastPitch && p > 40 && freq < 22050 && maxMag > 50) {
+
+      if(p != lastPitch && freq < 22050 && maxMag > 0.001) {
       	const size_t octave = floor(p / 12.0);
       	const string note = NOTE_LUT[p % 12];
 
@@ -134,7 +158,7 @@ void findDominantPitch(vector<double>& source, size_t sampleRate) {
       	midiout->sendMessage(&message);
       	//std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-      	std::cout << note << octave << '\t' << p << '\t' << totalMag << '\t' << maxMag << std::endl << std::flush;
+      	std::cout << note << octave << '\t' << p << '\t' << maxMag << std::endl << std::flush;
         lastPitch = p;
       }
     }
@@ -159,16 +183,13 @@ void normalize(std::vector<double>& data) {
   }
 }
 
-void run() {
+void run(size_t bufferSize, uint32_t sampleRate) {
   std::mutex bufferMutex;
-  JackRecorder recorder("pitchDetect");
-  double sourceSampleRate = recorder.getSampleRate();
-  std::cerr << "SampleRate: " << sourceSampleRate << std::endl;
-  JackRecorderCallback rc = [&](AudioWindow& buffer) {
-    findDominantPitch(buffer, sourceSampleRate);
+  RecorderCallback rc = [&](AudioWindow& buffer) {
+    findDominantPitch(buffer, sampleRate);
   };
 
-  recorder.setCallback(rc);
+  Recorder recorder(rc, bufferSize, sampleRate);
   recorder.capture(false);
 }
 
@@ -177,27 +198,17 @@ int main(int argc, char** argv) {
    * All distance options are in millimeter.
    */
   string audioFile;
-  unsigned int nPorts = midiout->getPortCount();
-  if ( nPorts == 0 ) {
-    std::cout << "No ports available!\n";
-    exit(1);
-  }
-  std::cerr << "Number of midi ports: " << nPorts << std::endl;
-  std::string portName;
-    for ( unsigned int i=0; i<nPorts; i++ ) {
-      try {
-        portName = midiout->getPortName(i);
-      }
-      catch ( RtMidiError &error ) {
-        error.printMessage();
-      }
-      std::cout << "  Input Port #" << i << ": " << portName << '\n';
-    }
+  size_t bufferSize = 1024;
+  uint32_t sampleRate = 44100;
+  uint16_t midiPort = 1;
 
-	midiout->openPort( 1 );
-	assert(midiout->isPortOpen());
   po::options_description genericDesc("Options");
-  genericDesc.add_options()("help,h", "Produce help message");
+  genericDesc.add_options()("help,h", "Produce help message")
+		("buffersize,b", po::value<size_t>(&bufferSize)->default_value(bufferSize),"The internal audio buffer size")
+		("samplerate,s", po::value<uint32_t>(&sampleRate)->default_value(sampleRate),"The sample rate to record with")
+		("midiport,p", po::value<uint16_t>(&midiPort)->default_value(midiPort),"The midi port to send messages to")
+		("list,l", "List midi ports");
+
 
   po::options_description hidden("Hidden options");
   hidden.add_options()("audioFile", po::value<string>(&audioFile), "audioFile");
@@ -220,8 +231,27 @@ int main(int argc, char** argv) {
     std::cerr << visible;
     return 0;
   }
-
-  run();
+  if(vm.count("list")) {
+		unsigned int nPorts = midiout->getPortCount();
+		if (nPorts == 0) {
+			std::cout << "No ports available!\n";
+			exit(1);
+		}
+		std::cerr << "Number of midi ports: " << nPorts << std::endl;
+		std::string portName;
+		for (unsigned int i = 0; i < nPorts; i++) {
+			try {
+				portName = midiout->getPortName(i);
+			} catch (RtMidiError &error) {
+				error.printMessage();
+			}
+			std::cout << "  Input Port #" << i << ": " << portName << '\n';
+		}
+		exit(0);
+  }
+	midiout->openPort(midiPort);
+	assert(midiout->isPortOpen());
+  run(bufferSize, sampleRate);
 
   return 0;
 }
