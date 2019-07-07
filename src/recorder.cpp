@@ -4,9 +4,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <thread>
-
 #include <sys/time.h>
 #include <ctime>
+#include <sndfile.hh>
+#include <fstream>
+
+std::ofstream dump("dump.wav");
 
 using std::cerr;
 using std::endl;
@@ -20,7 +23,7 @@ Recorder::Recorder(RecorderCallback callback, size_t bufferSize, uint32_t sample
   std::cerr << alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER) << std::endl;
 
   std::cerr << "Opening capture device:" << std::endl;
-  captureDev_ = alcCaptureOpenDevice(NULL, sampleRate, AL_FORMAT_MONO16, 2);
+  captureDev_ = alcCaptureOpenDevice(NULL, sampleRate, AL_FORMAT_MONO8, 4096);
   if (captureDev_ == NULL) {
     std::cerr << "Unable to open device!:" << std::endl;
     exit(1);
@@ -54,23 +57,27 @@ void Recorder::capture(bool detach) {
   std::thread captureThread([&](){
   alcCaptureStart(captureDev_);
   while (true) {
-    alcGetIntegerv(captureDev_, ALC_CAPTURE_SAMPLES, 1, &samplesAvailable);
-
+    alcGetIntegerv(captureDev_, ALC_CAPTURE_SAMPLES, sizeof(ALint), &samplesAvailable);
     if (samplesAvailable > 1) {
-      alcCaptureSamples(captureDev_, captureBuffer, samplesAvailable);
 
-      for(size_t i = 0; i < (size_t)samplesAvailable; i+=2) {
+    	alcCaptureSamples(captureDev_, captureBuffer, samplesAvailable);
+
+      for(size_t i = 0; i < (size_t)samplesAvailable; i++) {
         if(buffer.size() >= bufferSize_) {
           callback_(buffer);
           buffer.clear();
         }
-        short sample = captureBuffer[i];
-        sample = sample | (((short)captureBuffer[i + 1]) << 8);
-        buffer.push_back(((double)sample) / ((double)std::numeric_limits<short>().max()));
+//
+//        uint16_t sample = captureBuffer[i + 1];
+//        sample = sample | (((uint32_t)captureBuffer[i]) << 8);
+        dump << captureBuffer[i];
+//        buffer.push_back((double)sample / std::numeric_limits<uint16_t>::max());
+        buffer.push_back((double)captureBuffer[i]);
+
       }
     }
 
-    usleep(10000);
+ //   usleep(10000);
   }
   });
   if(detach)

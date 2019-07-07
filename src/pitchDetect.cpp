@@ -1,7 +1,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include <sndfile.hh>
+
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
@@ -14,6 +14,7 @@
 #include <mutex>
 #include <chrono>
 #include <thread>
+#include <fstream>
 #include "aquila/global.h"
 #include "aquila/functions.h"
 #include "aquila/transform/FftFactory.h"
@@ -21,7 +22,7 @@
 #include "aquila/tools/TextPlot.h"
 #include "aquila/source/window/HammingWindow.h"
 #include "recorder.hpp"
-
+#include "averager.hpp"
 
 namespace po = boost::program_options;
 
@@ -30,12 +31,14 @@ using std::cerr;
 using std::endl;
 using std::vector;
 RtMidiOut *midiout = new RtMidiOut();
+Averager<size_t> averager(1);
 std::vector<uint8_t> message;
 size_t lastPitch = 0;
 
 const std::vector<string> NOTE_LUT = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 typedef std::vector<double> AudioWindow;
 AudioWindow audio_buffer;
+
 
 void findDominantPitch(const vector<double>& source, size_t sampleRate) {
   using namespace Aquila;
@@ -46,11 +49,33 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
   SignalSource in(source, sampleRate);
   FramesCollection frames(in,SIZE);
   auto signalFFT = FftFactory::getFft(SIZE);
-
+  TextPlot plot;
+  plot.setTitle("Signal");
+  const Aquila::FrequencyType f_lp = 200;
+  Aquila::SpectrumType filterSpectrum(SIZE);
+	for (std::size_t i = 0; i < SIZE; ++i) {
+		if (i < (SIZE * f_lp / sampleRate)) {
+			// passband
+			filterSpectrum[i] = 0.0;
+		} else {
+			// stopband
+			filterSpectrum[i] = 1.0;
+		}
+	}
   for (auto frame : frames) {
   	frame *= hamming;
 
 		SpectrumType signalSpectrum = signalFFT->fft(frame.toArray());
+
+    std::transform(
+        std::begin(signalSpectrum),
+        std::end(signalSpectrum),
+        std::begin(filterSpectrum),
+        std::begin(signalSpectrum),
+        [] (Aquila::ComplexType x, Aquila::ComplexType y) { return x * y; }
+    );
+//		plot.plotSpectrum(signalSpectrum);
+
 		for (std::size_t i = 0; i < SIZE; ++i) {
 			double maxMag = 0;
 			size_t maxJ = 0;
@@ -58,7 +83,6 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
 
 			for (size_t j = 0; j < SIZE; ++j) {
 				auto& c = signalSpectrum[j];
-
 				const auto& mag = abs(c) / SIZE;
 				if (mag > maxMag) {
 					maxMag = mag;
@@ -81,28 +105,31 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
 
       const double& freq = ((maxJ + 1) * sampleRate) / SIZE;
 
-    	const size_t p = round(68 + 12.0 * log2(freq / A1));
+    	size_t p = round(68 + 12.0 * log2(freq / A1));
 
-      if(p != lastPitch && freq < 22050 && maxMag > 0.001) {
-      	const size_t octave = floor(p / 12.0);
-      	const string note = NOTE_LUT[p % 12];
+      if(p > 40 && freq < 22050 && maxMag > 0.2) {
+      	p = round(averager.next(p));
+      	if(p != lastPitch) {
+					const size_t octave = floor(p / 12.0);
+					const string note = NOTE_LUT[p % 12];
 
-      	message.clear();
-      	message.push_back(0x80);
-      	message.push_back(lastPitch + 12);
-      	message.push_back(0);
-      	midiout->sendMessage(&message);
+					message.clear();
+					message.push_back(0x80);
+					message.push_back(lastPitch + 11);
+					message.push_back(0);
+					midiout->sendMessage(&message);
 
-      	//std::this_thread::sleep_for(std::chrono::milliseconds(200));
-      	message.clear();
-      	message.push_back(0x90);
-      	message.push_back(p + 12);
-      	message.push_back(0x1F);
-      	midiout->sendMessage(&message);
-      	//std::this_thread::sleep_for(std::chrono::milliseconds(200));
+					//std::this_thread::sleep_for(std::chrono::milliseconds(200));
+					message.clear();
+					message.push_back(0x90);
+					message.push_back(p + 11);
+					message.push_back(0x1F);
+					midiout->sendMessage(&message);
+					//std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-      	std::cout << note << octave << '\t' << p << '\t' << maxMag << std::endl << std::flush;
-        lastPitch = p;
+					std::cout << note << octave << '\t' << p << '\t' << maxMag << std::endl << std::flush;
+					lastPitch = p;
+      	}
       }
     }
   }
@@ -128,7 +155,7 @@ void normalize(std::vector<double>& data) {
 
 void run(size_t bufferSize, uint32_t sampleRate) {
   std::mutex bufferMutex;
-  RecorderCallback rc = [&](AudioWindow& buffer) {
+  RecorderCallback rc = [=](AudioWindow& buffer) {
     findDominantPitch(buffer, sampleRate);
   };
 
@@ -140,7 +167,7 @@ int main(int argc, char** argv) {
   string audioFile;
   size_t bufferSize = 1024;
   uint32_t sampleRate = 44100;
-  uint16_t midiPort = 1;
+  uint16_t midiPort = 0;
 
   po::options_description genericDesc("Options");
   genericDesc.add_options()("help,h", "Produce help message")
