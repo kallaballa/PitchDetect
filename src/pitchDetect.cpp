@@ -22,7 +22,6 @@
 #include "aquila/tools/TextPlot.h"
 #include "aquila/source/window/HammingWindow.h"
 #include "recorder.hpp"
-#include "averager.hpp"
 
 namespace po = boost::program_options;
 
@@ -31,7 +30,6 @@ using std::cerr;
 using std::endl;
 using std::vector;
 RtMidiOut *midiout = new RtMidiOut();
-Averager<size_t> averager(1);
 std::vector<uint8_t> message;
 size_t lastPitch = 0;
 
@@ -51,17 +49,19 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
   auto signalFFT = FftFactory::getFft(SIZE);
   TextPlot plot;
   plot.setTitle("Signal");
-  const Aquila::FrequencyType f_lp = 200;
+  //create a high pass filter to remove low frequency noise
+  const Aquila::FrequencyType f_hp = 200;
   Aquila::SpectrumType filterSpectrum(SIZE);
 	for (std::size_t i = 0; i < SIZE; ++i) {
-		if (i < (SIZE * f_lp / sampleRate)) {
-			// passband
+		if (i < (SIZE * f_hp / sampleRate)) {
 			filterSpectrum[i] = 0.0;
 		} else {
-			// stopband
-			filterSpectrum[i] = 1.0;
+			filterSpectrum[i] = 1.0; //((double)SIZE - i) / SIZE;
 		}
 	}
+
+//	plot.plotSpectrum(filterSpectrum);
+
   for (auto frame : frames) {
   	frame *= hamming;
 
@@ -74,7 +74,6 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
         std::begin(signalSpectrum),
         [] (Aquila::ComplexType x, Aquila::ComplexType y) { return x * y; }
     );
-//		plot.plotSpectrum(signalSpectrum);
 
 		for (std::size_t i = 0; i < SIZE; ++i) {
 			double maxMag = 0;
@@ -91,24 +90,11 @@ void findDominantPitch(const vector<double>& source, size_t sampleRate) {
 				totalMag += mag;
 			}
 
-//			double sum = 0.0, mean, variance = 0.0, stdDeviation;
-//
-//			for (size_t i = 0; i < SIZE; ++i)
-//				sum += abs(signalSpectrum[i]);
-//			mean = sum / SIZE;
-//
-//			for (size_t i = 0; i < SIZE; ++i)
-//				variance += pow(abs(signalSpectrum[i]) - mean, 2);
-//			variance = variance / SIZE;
-//
-//			stdDeviation = sqrt(variance);
+      const double& freq = (maxJ * sampleRate) / (double)SIZE;
 
-      const double& freq = ((maxJ + 1) * sampleRate) / SIZE;
+    	size_t p = round(73.0 + 12.0 * log2(freq / A1));
 
-    	size_t p = round(68 + 12.0 * log2(freq / A1));
-
-      if(p > 40 && freq < 22050 && maxMag > 0.2) {
-      	p = round(averager.next(p));
+      if(p > 40 && freq < 22050 && maxMag > 0.12) {
       	if(p != lastPitch) {
 					const size_t octave = floor(p / 12.0);
 					const string note = NOTE_LUT[p % 12];
@@ -168,12 +154,13 @@ int main(int argc, char** argv) {
   size_t bufferSize = 1024;
   uint32_t sampleRate = 44100;
   uint16_t midiPort = 0;
-
+  uint16_t audioDevice = 0;
   po::options_description genericDesc("Options");
   genericDesc.add_options()("help,h", "Produce help message")
 		("buffersize,b", po::value<size_t>(&bufferSize)->default_value(bufferSize),"The internal audio buffer size")
 		("samplerate,s", po::value<uint32_t>(&sampleRate)->default_value(sampleRate),"The sample rate to record with")
-		("midiport,p", po::value<uint16_t>(&midiPort)->default_value(midiPort),"The midi port to send messages to")
+		("midiport,m", po::value<uint16_t>(&midiPort)->default_value(midiPort),"The midi port to send messages to")
+		("audiodev,a", po::value<uint16_t>(&audioDevice)->default_value(audioDevice),"The audio device to capture from")
 		("list,l", "List midi ports and audio devices");
 
 
