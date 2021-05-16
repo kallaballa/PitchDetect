@@ -1,4 +1,4 @@
-#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
 
 #IncludeRegexScan: ^.*$
 
@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/elchaschab/devel/PitchDetect/third/aquila/lib/ooura/fft4g.c
+/home/elchaschab/devel/PixelShift/third/aquila/lib/ooura/fft4g.c
 math.h
 -
 

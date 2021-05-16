@@ -1,4 +1,4 @@
-# Install script for directory: /home/elchaschab/devel/PitchDetect/third/aquila
+# Install script for directory: /home/elchaschab/devel/PixelShift/third/aquila
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -32,32 +32,27 @@ if(NOT DEFINED CMAKE_INSTALL_SO_NO_EXE)
   set(CMAKE_INSTALL_SO_NO_EXE "0")
 endif()
 
-# Is this installation the result of a crosscompile?
-if(NOT DEFINED CMAKE_CROSSCOMPILING)
-  set(CMAKE_CROSSCOMPILING "FALSE")
+if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/elchaschab/devel/PixelShift/third/aquila/libAquila.a")
 endif()
 
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/elchaschab/devel/PitchDetect/third/aquila/libAquila.a")
+if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/aquila" TYPE DIRECTORY FILES "/home/elchaschab/devel/PixelShift/third/aquila/aquila/" FILES_MATCHING REGEX "/[^/]*\\.h$")
 endif()
 
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/aquila" TYPE DIRECTORY FILES "/home/elchaschab/devel/PitchDetect/third/aquila/aquila/" FILES_MATCHING REGEX "/[^/]*\\.h$")
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/aquila" TYPE FILE FILES
-    "/home/elchaschab/devel/PitchDetect/third/aquila/CHANGELOG"
-    "/home/elchaschab/devel/PitchDetect/third/aquila/LICENSE"
-    "/home/elchaschab/devel/PitchDetect/third/aquila/README.md"
+    "/home/elchaschab/devel/PixelShift/third/aquila/CHANGELOG"
+    "/home/elchaschab/devel/PixelShift/third/aquila/LICENSE"
+    "/home/elchaschab/devel/PixelShift/third/aquila/README.md"
     )
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/elchaschab/devel/PitchDetect/third/aquila/lib/cmake_install.cmake")
-  include("/home/elchaschab/devel/PitchDetect/third/aquila/examples/cmake_install.cmake")
-  include("/home/elchaschab/devel/PitchDetect/third/aquila/tests/cmake_install.cmake")
+  include("/home/elchaschab/devel/PixelShift/third/aquila/lib/cmake_install.cmake")
+  include("/home/elchaschab/devel/PixelShift/third/aquila/examples/cmake_install.cmake")
+  include("/home/elchaschab/devel/PixelShift/third/aquila/tests/cmake_install.cmake")
 
 endif()
 
@@ -69,5 +64,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/elchaschab/devel/PitchDetect/third/aquila/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/elchaschab/devel/PixelShift/third/aquila/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

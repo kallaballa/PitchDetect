@@ -1,8 +1,8 @@
-IF(NOT EXISTS "/home/elchaschab/devel/PitchDetect/third/aquila/install_manifest.txt")
-  MESSAGE(FATAL_ERROR "Cannot find install manifest: \"/home/elchaschab/devel/PitchDetect/third/aquila/install_manifest.txt\"")
-ENDIF(NOT EXISTS "/home/elchaschab/devel/PitchDetect/third/aquila/install_manifest.txt")
+IF(NOT EXISTS "/home/elchaschab/devel/PixelShift/third/aquila/install_manifest.txt")
+  MESSAGE(FATAL_ERROR "Cannot find install manifest: \"/home/elchaschab/devel/PixelShift/third/aquila/install_manifest.txt\"")
+ENDIF(NOT EXISTS "/home/elchaschab/devel/PixelShift/third/aquila/install_manifest.txt")
 
-FILE(READ "/home/elchaschab/devel/PitchDetect/third/aquila/install_manifest.txt" files)
+FILE(READ "/home/elchaschab/devel/PixelShift/third/aquila/install_manifest.txt" files)
 STRING(REGEX REPLACE "\n" ";" files "${files}")
 FOREACH(file ${files})
   MESSAGE(STATUS "Uninstalling \"$ENV{DESTDIR}${file}\"")
